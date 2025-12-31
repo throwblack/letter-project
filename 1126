@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Romantic Confession</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Dancing Script', cursive; /* Cute cursive font */
+            background: linear-gradient(135deg, #ffb3ba, #ffdfba); /* Soft pink gradient */
+            color: #d63384;
+            position: relative;
+        }
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            z-index: 1;
+        }
+        .page.active {
+            opacity: 1;
+            z-index: 2;
+        }
+        .hearts-trail {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .heart {
+            position: absolute;
+            font-size: 20px;
+            color: #ff69b4;
+            animation: float 2s ease-out forwards;
+        }
+        @keyframes float {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(1) translateY(-50px); opacity: 0; }
+        }
+        .confession-text {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+        }
+        .buttons {
+            display: flex;
+            gap: 2rem;
+        }
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            font-family: inherit;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #ff69b4, #ffb3ba);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        #no-btn {
+            position: relative;
+        }
+        .reaction {
+            position: absolute;
+            font-size: 1rem;
+            color: #d63384;
+            opacity: 0;
+            animation: fadeInOut 1s ease-in-out;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        .flower-page {
+            position: relative;
+        }
+        .flowers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .flower {
+            position: absolute;
+            bottom: -100px;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ff69b4, #ffb3ba);
+            border-radius: 50%;
+            animation: bloom 5s ease-in-out forwards;
+        }
+        @keyframes bloom {
+            0% { transform: scale(0) translateY(0); opacity: 0; }
+            50% { transform: scale(1) translateY(-50vh); opacity: 1; }
+            100% { transform: scale(1.2) translateY(-100vh); opacity: 0.8; }
+        }
+        .flower-text {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            z-index: 1;
+            position: relative;
+        }
+        .continue-btn {
+            position: absolute;
+            bottom: 2rem;
+            z-index: 1;
+        }
+        .message-page {
+            text-align: center;
+            padding: 2rem;
+        }
+        .message-text {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 768px) {
+            .confession-text { font-size: 2rem; }
+            .subtitle { font-size: 1rem; }
+            button { padding: 0.8rem 1.5rem; font-size: 1rem; }
+            .buttons { flex-direction: column; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Page 1: Confession -->
+    <div id="page1" class="page active">
+        <div class="hearts-trail" id="hearts-trail"></div>
+        <div class="confession-text">Will you be my lover?</div>
+        <div class="subtitle">(please say yes…)</div>
+        <div class="buttons">
+            <button id="yes-btn">Yes, I do</button>
+            <button id="no-btn">No, leave me alone</button>
+        </div>
+    </div>
+
+    <!-- Page 2: Flowers -->
+    <div id="page2" class="page flower-page">
+        <div class="flowers" id="flowers"></div>
+        <div class="flower-text">These flowers are for you</div>
+        <button class="continue-btn" id="continue-btn">Continue</button>
+    </div>
+
+    <!-- Page 3: Message -->
+    <div id="page3" class="page message-page">
+        <div class="message-text" id="message-text"></div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentPage = 1;
+        const pages = [document.getElementById('page1'), document.getElementById('page2'), document.getElementById('page3')];
+        const noTexts = ["No, leave me alone", "Are you sure?", "Really sure?", "Think again…", "Sayang :(", "If you say no, I’ll be really sad…", "Very very sad…"];
+        let noIndex = 0;
+        let reactionCount = 0;
+        const reactions = ["eh…", "hey…", "that’s mean", "please…"];
+
+        // Hearts trail animation
+        let hearts = [];
+        function createHeart(x, y) {
+            const heart = document.createElement('div');
+            heart.className = 'heart';
+            heart.textContent = '❤️';
+            heart.style.left = `${x - 10}px`;
+            heart.style.top = `${y - 10}px`;
+            document.getElementById('hearts-trail').appendChild(heart);
+            setTimeout(() => heart.remove(), 2000);
+        }
+        document.addEventListener('mousemove', (e) => {
+            if (currentPage === 1) createHeart(e.clientX, e.clientY);
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (currentPage === 1) {
+                const touch = e.touches[0];
+                createHeart(touch.clientX, touch.clientY);
+            }
+        });
+
+        // Page transitions
+        function switchPage(toPage) {
+            pages[currentPage - 1].classList.remove('active');
+            setTimeout(() => {
+                currentPage = toPage;
+                pages[toPage - 1].classList.add('active');
+                if (toPage === 2) startFlowers();
+                if (toPage === 3) startTyping();
+            }, 500);
+        }
+
+        // No button behavior
+        document.getElementById('no-btn').addEventListener('mouseenter', moveNoBtn);
+        document.getElementById('no-btn').addEventListener('click', moveNoBtn);
+        function moveNoBtn() {
+            if (noIndex < noTexts.length - 1) {
+                noIndex++;
+                document.getElementById('no-btn').textContent = noTexts[noIndex];
+                // Move button randomly
+                const btn = document.getElementById('no-btn');
+                btn.style.position = 'absolute';
+                btn.style.left = `${Math.random() * (window.innerWidth - 200)}px`;
+                btn.style.top = `${Math.random() * (window.innerHeight - 100)}px`;
+                // Show reaction
+                if (reactionCount < reactions.length) {
+                    const reaction = document.createElement('div');
+                    reaction.className = 'reaction';
+                    reaction.textContent = reactions[reactionCount];
+                    reaction.style.left = `${Math.random() * (window.innerWidth - 100)}px`;
+                    reaction.style.top = `${Math.random() * (window.innerHeight - 50)}px`;
+                    document.body.appendChild(reaction);
+                    setTimeout(() => reaction.remove(), 1000);
+                    reactionCount++;
+                }
+            } else {
+                document.getElementById('no-btn').style.display = 'none';
+            }
+        }
+
+        // Yes button
+        document.getElementById('yes-btn').addEventListener('click', () => switchPage(2));
+
+        // Flowers animation
+        function startFlowers() {
+            const flowersContainer = document.getElementById('flowers');
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const flower = document.createElement('div');
+                    flower.className = 'flower';
+                    flower.style.left = `${Math.random() * 100}%`;
+                    flower.style.animationDelay = `${Math.random() * 3}s`;
+                    flowersContainer.appendChild(flower);
+                }, i * 200);
+            }
+        }
+
+        // Continue to Page 3
+        document.getElementById('continue-btn').addEventListener('click', () => switchPage(3));
+
+        // Typing animation
+        function startTyping() {
+            const message = `My dearest,\n\nI’ve been wanting to tell you this for so long.\nYou make my heart skip a beat every time I see you.\nWill you be mine forever?\n\nWith all my love.`;
+            const textElement = document.getElementById('message-text');
+            let index = 0;
+            function type() {
+                if (index < message.length) {
+                    textElement.textContent += message[index];
+                    index++;
+                    setTimeout(type, 100);
+                    if (message[index - 1] === '\n') setTimeout(type, 500); // Pause at new lines
+                }
+            }
+            type();
+        }
+    </script>
+</body>
+</html>
